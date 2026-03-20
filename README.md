@@ -13,3 +13,4 @@ Low-latency guardrails for LLM pipelines. Built in Rust.
 /* commit_ref: 2026-03-19 23:40:00 */
 /* commit_ref: 2026-03-20 15:37:00 */
 /* commit_ref: 2026-03-20 11:03:00 */
+/* commit_ref: 2026-03-20 12:08:00 */
