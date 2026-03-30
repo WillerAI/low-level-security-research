@@ -1,0 +1,9 @@
+# Rust artifacts
+target/
+Cargo.lock
+
+# Backup and temp files
+*#
+*~
+*.swp
+*.py
