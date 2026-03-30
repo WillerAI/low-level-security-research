@@ -1,16 +1,19 @@
+// Standardized for Rust 2024 Edition
+#![allow(unsafe_op_in_unsafe_fn)]
+
 pub mod bench;
 
 use std::marker::PhantomData;
 use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
 
-// --- Compile-Time Invariants ---
+// --- Compile-Time Structural Invariants ---
 
-/// Static assertion to ensure the frame layout is optimized for cache alignment.
-/// Total size: 4 (magic) + 1 (type) + 4 (len) + 8 (ptr) = 17 bytes.
+/// Static assertion to ensure the frame layout is optimized for zero-copy.
+/// Memory layout: 4 (magic) + 1 (type) + 4 (len) + 8 (ptr) = 17 bytes.
 const _: () = assert!(std::mem::size_of::<RawMcpFrame>() == 17);
 
-// --- State Machine Markers ---
+// --- State Machine Lifecycle Markers ---
 
 #[derive(Clone, Copy, Debug)]
 pub struct Unverified;
@@ -18,10 +21,10 @@ pub struct Unverified;
 #[derive(Clone, Copy, Debug)]
 pub struct FormallyProven;
 
-// --- Memory Layout & Data Structures ---
+// --- Core Data Structures ---
 
 /// Low-level representation of an MCP binary frame.
-/// Packed representation for zero-copy DMA compatibility.
+/// Uses packed representation for direct DMA buffer mapping.
 #[repr(C, packed)]
 pub struct RawMcpFrame {
     pub magic: u32,
@@ -32,7 +35,7 @@ pub struct RawMcpFrame {
 
 impl RawMcpFrame {
     /// Zero-copy access to the underlying byte stream.
-    /// Returns a slice with lifetime elision tied to the pointer validity.
+    /// Provides an immutable slice view without triggering allocations.
     #[inline(always)]
     pub fn payload(&self) -> &[u8] {
         if self.payload_ptr.is_null() || self.payload_len == 0 { 
@@ -45,23 +48,22 @@ impl RawMcpFrame {
 // --- Security Policy Engine ---
 
 pub trait SecurityPolicy<T> {
-    /// Mathematical predicate to ensure frame isolation.
+    /// Mathematical predicate to enforce frame-level isolation.
     fn prove_isolation(frame: &RawMcpFrame) -> bool;
 }
 
-/// Production-grade isolation policy for agentic AI workloads.
+/// Default high-performance isolation policy for MCP v2.0 workflows.
 #[derive(Clone, Copy)]
 pub struct DefaultIsolationPolicy;
 
 impl SecurityPolicy<FormallyProven> for DefaultIsolationPolicy {
-    /// Implements high-speed scanning for tool-escalation signals (0xDF).
-    /// Optimized for SIMD vectorization by the LLVM backend.
+    /// Deterministic security check optimized for LLVM SIMD auto-vectorization.
     #[inline(always)]
     fn prove_isolation(frame: &RawMcpFrame) -> bool {
         let p = frame.payload();
         // Constant-time execution path for frame type validation.
         if frame.frame_type == 1 { 
-            // SIMD-friendly byte search.
+            // High-speed byte-pattern scanning (Non-blocking).
             !p.contains(&0xDF) 
         } else {
             true
@@ -69,11 +71,11 @@ impl SecurityPolicy<FormallyProven> for DefaultIsolationPolicy {
     }
 }
 
-// --- MSIK Kernel (Typestate Pattern) ---
+// --- MSIK Kernel (Typestate Pattern Implementation) ---
 
 /// MSIK Core Kernel.
-/// S = Current state in the formal proof lifecycle.
-/// P = Applied security policy.
+/// S = Current verification state.
+/// P = Security policy implementation.
 #[derive(Clone, Copy)]
 pub struct MsikKernel<P: SecurityPolicy<FormallyProven>, S = Unverified> {
     _policy: PhantomData<P>,
@@ -81,13 +83,13 @@ pub struct MsikKernel<P: SecurityPolicy<FormallyProven>, S = Unverified> {
 }
 
 impl<P: SecurityPolicy<FormallyProven>> MsikKernel<P, Unverified> {
-    /// Initialize a new kernel instance in the Unverified state.
+    /// Instantiates a new kernel in the Unverified state.
     pub fn new() -> Self { 
         Self { _policy: PhantomData, _state: PhantomData } 
     }
 
-    /// Transitions the kernel state from Unverified to FormallyProven.
-    /// This is a non-bypassable security gate enforced at compile-time.
+    /// Primary security gate. Consumes the Unverified kernel and 
+    /// transitions to FormallyProven state upon successful validation.
     pub fn verify(self, frame: &RawMcpFrame) -> Result<MsikKernel<P, FormallyProven>, &'static str> {
         if P::prove_isolation(frame) { 
             Ok(MsikKernel { _policy: PhantomData, _state: PhantomData }) 
@@ -99,17 +101,17 @@ impl<P: SecurityPolicy<FormallyProven>> MsikKernel<P, Unverified> {
 
 impl<P: SecurityPolicy<FormallyProven>> MsikKernel<P, FormallyProven> {
     /// High-performance hand-off to the inference engine.
-    /// This method is only callable on kernels that have successfully passed formal verification.
+    /// Access is restricted to proven states via Rust's ownership system.
     #[inline(always)]
     pub fn pass_to_inference(&self, _frame: &RawMcpFrame) {
-        // Implementation-specific: Direct memory hand-off or DMA trigger.
+        // Production hook for verified DMA transfer.
     }
 }
 
 // --- Python Interoperability Layer ---
 
-/// High-level Python bridge for the MSIK kernel.
-/// Provides sub-30ns validation latency for Python-based agentic workflows.
+/// High-level Python bridge for MSIK kernel validation.
+/// Designed for low-latency integration into Python-based agentic AI pipelines.
 #[pyfunction]
 fn verify_payload(frame_type: u8, payload: Vec<u8>) -> PyResult<bool> {
     let frame = RawMcpFrame {
@@ -132,7 +134,7 @@ fn msik(_py: Python, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-// --- Formal Verification (Kani Hooks) ---
+// --- Formal Verification Hooks (Kani Model Checker) ---
 
 #[cfg(kani)]
 #[kani::proof]
@@ -153,13 +155,15 @@ fn proof_msik_kernel_safety() {
     let _ = kernel.verify(&frame);
 }
 
+// --- Unit Tests ---
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_standard_verification_flow() {
-        let payload = b"normal_request";
+        let payload = b"benign_prompt_data";
         let frame = RawMcpFrame {
             magic: 0x4D435032,
             frame_type: 1,
@@ -173,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_security_escalation_denial() {
-        let malicious = vec![0x00, 0xDF, 0x01]; // Contains forbidden 0xDF
+        let malicious = vec![0x00, 0xDF, 0x01];
         let frame = RawMcpFrame {
             magic: 0x4D435032,
             frame_type: 1,
