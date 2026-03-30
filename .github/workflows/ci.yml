@@ -1,0 +1,37 @@
+name: MSIK Continuous Integration
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality-gate:
+    name: Rust Security & Performance Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 2024
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Check Formatting
+        run: cargo fmt -- --check
+
+      - name: Linting (Clippy)
+        run: cargo clippy -- -D warnings
+
+      - name: Run Unit Tests
+        run: cargo test --verbose
+
+      - name: Build Example
+        run: cargo build --example basic_usage --release
+
+      - name: Build Python Wheel (Maturin)
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist
