@@ -3,9 +3,9 @@
 
 pub mod bench;
 
-use std::marker::PhantomData;
-use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use std::marker::PhantomData;
 
 // --- Compile-Time Structural Invariants ---
 
@@ -32,8 +32,8 @@ pub struct RawMcpFrame {
 impl RawMcpFrame {
     #[inline(always)]
     pub fn payload(&self) -> &[u8] {
-        if self.payload_ptr.is_null() || self.payload_len == 0 { 
-            return &[]; 
+        if self.payload_ptr.is_null() || self.payload_len == 0 {
+            return &[];
         }
         unsafe { std::slice::from_raw_parts(self.payload_ptr, self.payload_len as usize) }
     }
@@ -52,8 +52,8 @@ impl SecurityPolicy<FormallyProven> for DefaultIsolationPolicy {
     #[inline(always)]
     fn prove_isolation(frame: &RawMcpFrame) -> bool {
         let p = frame.payload();
-        if frame.frame_type == 1 { 
-            !p.contains(&0xDF) 
+        if frame.frame_type == 1 {
+            !p.contains(&0xDF)
         } else {
             true
         }
@@ -76,15 +76,24 @@ impl<P: SecurityPolicy<FormallyProven>> Default for MsikKernel<P, Unverified> {
 }
 
 impl<P: SecurityPolicy<FormallyProven>> MsikKernel<P, Unverified> {
-    pub fn new() -> Self { 
-        Self { _policy: PhantomData, _state: PhantomData } 
+    pub fn new() -> Self {
+        Self {
+            _policy: PhantomData,
+            _state: PhantomData,
+        }
     }
 
-    pub fn verify(self, frame: &RawMcpFrame) -> Result<MsikKernel<P, FormallyProven>, &'static str> {
-        if P::prove_isolation(frame) { 
-            Ok(MsikKernel { _policy: PhantomData, _state: PhantomData }) 
-        } else { 
-            Err("Security Violation: Formal isolation proof failed.") 
+    pub fn verify(
+        self,
+        frame: &RawMcpFrame,
+    ) -> Result<MsikKernel<P, FormallyProven>, &'static str> {
+        if P::prove_isolation(frame) {
+            Ok(MsikKernel {
+                _policy: PhantomData,
+                _state: PhantomData,
+            })
+        } else {
+            Err("Security Violation: Formal isolation proof failed.")
         }
     }
 }
@@ -108,8 +117,9 @@ fn verify_payload(frame_type: u8, payload: Vec<u8>) -> PyResult<bool> {
     };
 
     let kernel = MsikKernel::<DefaultIsolationPolicy, Unverified>::new();
-    
-    kernel.verify(&frame)
+
+    kernel
+        .verify(&frame)
         .map(|_| true)
         // Fix 2: Simplified closure
         .map_err(PyValueError::new_err)
