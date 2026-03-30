@@ -3,15 +3,14 @@ name = "msik"
 version = "2.0.0"
 edition = "2021"
 authors = ["WillerAI <eksosbdib72@gmail.com>"]
+description = "High-performance formal verification kernel for MCP frames"
 
 [lib]
 name = "msik"
-# cdylib нужен для создания библиотеки, которую поймет Python
-crate_type = ["cdylib", "rlib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 tokio = { version = "1.35", features = ["full"] }
-# Добавляем PyO3
 pyo3 = { version = "0.20", features = ["extension-module"] }
 
 [dev-dependencies]

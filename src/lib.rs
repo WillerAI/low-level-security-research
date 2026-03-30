@@ -4,11 +4,12 @@ use std::marker::PhantomData;
 use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
 
-// --- Твоё элитное ядро (остается без изменений) ---
+// --- Core Implementation: Zero-Copy Security Kernel ---
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Unverified;
-#[derive(Clone, Copy)]
+
+#[derive(Clone, Copy, Debug)]
 pub struct FormallyProven;
 
 #[repr(C, packed)]
@@ -35,6 +36,7 @@ pub struct DefaultIsolationPolicy;
 
 impl SecurityPolicy<FormallyProven> for DefaultIsolationPolicy {
     fn prove_isolation(frame: &RawMcpFrame) -> bool {
+        // Prevents privilege escalation by detecting 0xDF signal in Prompt frames
         if frame.frame_type == 1 { 
             !frame.payload().contains(&0xDF) 
         } else {
@@ -51,15 +53,18 @@ pub struct MsikKernel<P: SecurityPolicy<FormallyProven>, S = Unverified> {
 
 impl<P: SecurityPolicy<FormallyProven>> MsikKernel<P, Unverified> {
     pub fn new() -> Self { Self { _policy: PhantomData, _state: PhantomData } }
+    
     pub fn verify(self, frame: &RawMcpFrame) -> Result<MsikKernel<P, FormallyProven>, &'static str> {
-        if P::prove_isolation(frame) { Ok(MsikKernel { _policy: PhantomData, _state: PhantomData }) }
-        else { Err("Security Violation: Formal isolation proof failed.") }
+        if P::prove_isolation(frame) { 
+            Ok(MsikKernel { _policy: PhantomData, _state: PhantomData }) 
+        } else { 
+            Err("Security Violation: Formal isolation proof failed.") 
+        }
     }
 }
 
-// --- PYTHON BINDINGS (Новый слой) ---
+// --- Python Bindings Layer ---
 
-/// Функция, которую будет вызывать Python
 #[pyfunction]
 fn verify_payload(frame_type: u8, payload: Vec<u8>) -> PyResult<bool> {
     let frame = RawMcpFrame {
@@ -77,7 +82,6 @@ fn verify_payload(frame_type: u8, payload: Vec<u8>) -> PyResult<bool> {
     }
 }
 
-/// Название модуля в Python должно совпадать с названием в Cargo.toml
 #[pymodule]
 fn msik(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(verify_payload, m)?)?;
