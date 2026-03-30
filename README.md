@@ -1,22 +1,12 @@
 # MSIK: MCP-Safe-Inference-Kernel 🛡️
-Low-latency guardrails for LLM pipelines. Built in Rust.
 
-/* commit_ref: 2026-03-10 21:05:00 */
-/* commit_ref: 2026-03-12 12:12:00 */
-/* commit_ref: 2026-03-12 23:46:00 */
-/* commit_ref: 2026-03-12 20:20:00 */
-/* commit_ref: 2026-03-12 13:53:00 */
-/* commit_ref: 2026-03-16 22:44:00 */
-/* commit_ref: 2026-03-16 21:50:00 */
-/* commit_ref: 2026-03-17 10:05:00 */
-/* commit_ref: 2026-03-19 20:45:00 */
-/* commit_ref: 2026-03-19 23:40:00 */
-/* commit_ref: 2026-03-20 15:37:00 */
-/* commit_ref: 2026-03-20 11:03:00 */
-/* commit_ref: 2026-03-20 12:08:00 */
-/* commit_ref: 2026-03-21 17:53:00 */
-/* commit_ref: 2026-03-24 22:46:00 */
-/* commit_ref: 2026-03-24 16:32:00 */
-/* commit_ref: 2026-03-25 11:53:00 */
-/* commit_ref: 2026-03-25 14:07:00 */
-/* commit_ref: 2026-03-26 23:39:00 */
+High-performance, low-latency guardrail shim for **Model Context Protocol (MCP)** traffic. 
+Designed to intercept and validate token streams before they reach the inference engine.
+
+## Features
+- **Zero-copy validation**: Direct byte-stream analysis.
+- **Async-first**: Built on Tokio for high-throughput environments.
+- **Prompt Injection Defense**: Multi-layered heuristic for malicious payload detection.
+
+## Usage
+`msik` acts as a transparent proxy between the MCP client and the LLM server, ensuring that every frame complies with your safety policies.
