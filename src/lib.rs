@@ -3,9 +3,9 @@
 
 pub mod bench;
 
-use std::marker::PhantomData;
-use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use std::marker::PhantomData;
 
 // --- Compile-Time Structural Invariants ---
 
@@ -38,8 +38,8 @@ impl RawMcpFrame {
     /// Provides an immutable slice view without triggering allocations.
     #[inline(always)]
     pub fn payload(&self) -> &[u8] {
-        if self.payload_ptr.is_null() || self.payload_len == 0 { 
-            return &[]; 
+        if self.payload_ptr.is_null() || self.payload_len == 0 {
+            return &[];
         }
         unsafe { std::slice::from_raw_parts(self.payload_ptr, self.payload_len as usize) }
     }
@@ -62,9 +62,9 @@ impl SecurityPolicy<FormallyProven> for DefaultIsolationPolicy {
     fn prove_isolation(frame: &RawMcpFrame) -> bool {
         let p = frame.payload();
         // Constant-time execution path for frame type validation.
-        if frame.frame_type == 1 { 
+        if frame.frame_type == 1 {
             // High-speed byte-pattern scanning (Non-blocking).
-            !p.contains(&0xDF) 
+            !p.contains(&0xDF)
         } else {
             true
         }
@@ -84,17 +84,26 @@ pub struct MsikKernel<P: SecurityPolicy<FormallyProven>, S = Unverified> {
 
 impl<P: SecurityPolicy<FormallyProven>> MsikKernel<P, Unverified> {
     /// Instantiates a new kernel in the Unverified state.
-    pub fn new() -> Self { 
-        Self { _policy: PhantomData, _state: PhantomData } 
+    pub fn new() -> Self {
+        Self {
+            _policy: PhantomData,
+            _state: PhantomData,
+        }
     }
 
-    /// Primary security gate. Consumes the Unverified kernel and 
+    /// Primary security gate. Consumes the Unverified kernel and
     /// transitions to FormallyProven state upon successful validation.
-    pub fn verify(self, frame: &RawMcpFrame) -> Result<MsikKernel<P, FormallyProven>, &'static str> {
-        if P::prove_isolation(frame) { 
-            Ok(MsikKernel { _policy: PhantomData, _state: PhantomData }) 
-        } else { 
-            Err("Security Violation: Formal isolation proof failed.") 
+    pub fn verify(
+        self,
+        frame: &RawMcpFrame,
+    ) -> Result<MsikKernel<P, FormallyProven>, &'static str> {
+        if P::prove_isolation(frame) {
+            Ok(MsikKernel {
+                _policy: PhantomData,
+                _state: PhantomData,
+            })
+        } else {
+            Err("Security Violation: Formal isolation proof failed.")
         }
     }
 }
@@ -122,8 +131,9 @@ fn verify_payload(frame_type: u8, payload: Vec<u8>) -> PyResult<bool> {
     };
 
     let kernel = MsikKernel::<DefaultIsolationPolicy, Unverified>::new();
-    
-    kernel.verify(&frame)
+
+    kernel
+        .verify(&frame)
         .map(|_| true)
         .map_err(|e| PyValueError::new_err(e))
 }
