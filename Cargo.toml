@@ -15,3 +15,6 @@ pyo3 = { version = "0.20", features = ["extension-module"] }
 
 [dev-dependencies]
 pyo3 = { version = "0.20", features = ["auto-initialize"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
